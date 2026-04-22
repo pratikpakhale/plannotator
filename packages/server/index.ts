@@ -531,6 +531,13 @@ export async function startPlannotatorServer(
             return Response.json({ ok: true, savedPath });
           }
 
+          // API: Exit plan review session (orphaned process cleanup — just kill it)
+          if (url.pathname === "/api/exit" && req.method === "POST" && mode !== "archive") {
+            deleteDraft(draftKey);
+            setTimeout(() => process.exit(0), 100);
+            return Response.json({ ok: true });
+          }
+
           // Favicon
           if (url.pathname === "/favicon.svg") return handleFavicon();
 

@@ -449,6 +449,11 @@ export async function startPlanReviewServer(options: {
 			deleteDraft(draftKey);
 			publishDecision({ approved: false, feedback, savedPath });
 			json(res, { ok: true, savedPath });
+		} else if (url.pathname === "/api/exit" && req.method === "POST") {
+			// Exit plan review session (orphaned process cleanup — just kill it)
+			deleteDraft(draftKey);
+			json(res, { ok: true });
+			setTimeout(() => process.exit(0), 100);
 		} else {
 			html(res, options.htmlContent);
 		}
