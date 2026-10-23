@@ -1004,6 +1004,21 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Exit plan review session (orphaned process cleanup — kills the server process)
+  const handlePlanExit = useCallback(async () => {
+    setIsExiting(true);
+    try {
+      const res = await fetch('/api/exit', { method: 'POST' });
+      if (res.ok) {
+        setSubmitted('exited');
+      } else {
+        throw new Error('Failed to exit');
+      }
+    } catch {
+      setIsExiting(false);
+    }
+  }, []);
+
   // Global keyboard shortcuts (Cmd/Ctrl+Enter to submit)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1542,6 +1557,13 @@ const App: React.FC = () => {
               onSaveToObsidian={() => handleQuickSaveToNotes('obsidian')}
               onSaveToBear={() => handleQuickSaveToNotes('bear')}
               onSaveToOctarine={() => handleQuickSaveToNotes('octarine')}
+              onExitSession={isApiMode && !annotateMode && !archive.archiveMode && !isSharedSession ? () => {
+                if (allAnnotations.length > 0 || editorAnnotations.length > 0 || globalAttachments.length > 0) {
+                  setShowExitWarning(true);
+                } else {
+                  handlePlanExit();
+                }
+              } : undefined}
               sharingEnabled={sharingEnabled}
               isApiMode={isApiMode}
               agentInstructionsEnabled={isApiMode && !archive.archiveMode && !annotateMode}
@@ -1885,11 +1907,15 @@ const App: React.FC = () => {
           onClose={() => setShowExitWarning(false)}
           onConfirm={() => {
             setShowExitWarning(false);
-            handleAnnotateExit();
+            if (annotateMode) {
+              handleAnnotateExit();
+            } else {
+              handlePlanExit();
+            }
           }}
           title="Annotations Won't Be Sent"
-          message={<>You have {allAnnotations.length + editorAnnotations.length + linkedDocHook.docAnnotationCount + globalAttachments.length} annotation{(allAnnotations.length + editorAnnotations.length + linkedDocHook.docAnnotationCount + globalAttachments.length) !== 1 ? 's' : ''} that will be lost if you close.</>}
-          subMessage="To send your annotations, use Send Annotations instead."
+          message={<>You have {allAnnotations.length + editorAnnotations.length + (annotateMode ? linkedDocHook.docAnnotationCount : 0) + globalAttachments.length} annotation{(allAnnotations.length + editorAnnotations.length + (annotateMode ? linkedDocHook.docAnnotationCount : 0) + globalAttachments.length) !== 1 ? 's' : ''} that will be lost if you close.</>}
+          subMessage={annotateMode ? "To send your annotations, use Send Annotations instead." : "To send your feedback, use Send Feedback instead."}
           confirmText="Close Anyway"
           cancelText="Cancel"
           variant="warning"
